@@ -1,0 +1,129 @@
+
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#080b14">
+    <title>Neon Snake — Arcade</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="script.js" defer></script>
+</head>
+<body>
+    <div class="background-glow glow-one"></div>
+    <div class="background-glow glow-two"></div>
+
+    <main class="app">
+        <header class="topbar">
+            <a href="#" class="brand">
+                <span class="brand-icon">ϟ</span>
+                <span>NEON<span class="brand-accent">SNAKE</span></span>
+            </a>
+            <div class="status">
+                <span class="status-dot"></span>
+                ARCADE MODE
+            </div>
+        </header>
+
+        <section class="hero">
+            <p class="eyebrow">✦ CLASSIC GAME REIMAGINED ✦</p>
+            <h1>Enter the <span>Grid.</span></h1>
+            <p class="subtitle">
+                Zbieraj energię. Rośnij w siłę. Nie daj się złapać.
+            </p>
+        </section>
+
+        <section class="game-layout">
+            <aside class="side-panel">
+                <div class="panel-label">YOUR PERFORMANCE</div>
+
+                <div class="stat-card">
+                    <span class="stat-icon purple">✦</span>
+                    <div>
+                        <p class="stat-name">WYNIK</p>
+                        <strong id="score">0000</strong>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <span class="stat-icon green">↗</span>
+                    <div>
+                        <p class="stat-name">REKORD</p>
+                        <strong id="best">0000</strong>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <span class="stat-icon orange">⚡</span>
+                    <div>
+                        <p class="stat-name">POZIOM</p>
+                        <strong id="level">01</strong>
+                    </div>
+                </div>
+
+                <div class="settings">
+                    <label for="difficulty">POZIOM TRUDNOŚCI</label>
+                    <select id="difficulty">
+                        <option value="easy">Easy</option>
+                        <option value="normal" selected>Normal</option>
+                        <option value="hard">Hard</option>
+                    </select>
+                </div>
+
+                <div class="legend">
+                    <div><span class="legend-dot food-dot"></span> Energia <b>+10 pkt</b></div>
+                    <div><span class="legend-dot snake-dot"></span> Twój wąż</div>
+                </div>
+            </aside>
+
+            <div class="game-card">
+                <div class="game-header">
+                    <div>
+                        <span class="live-indicator"></span>
+                        <span id="game-status">GOTOWY DO GRY</span>
+                    </div>
+                    <div class="game-size">24 × 24 GRID</div>
+                </div>
+
+                <div class="canvas-wrap">
+                    <canvas id="game" width="480" height="480"
+                        aria-label="Plansza gry Snake"></canvas>
+
+                    <div class="overlay" id="overlay">
+                        <div class="overlay-content">
+                            <div class="play-symbol" id="overlay-icon">▶</div>
+                            <h2 id="overlay-title">Gotowy?</h2>
+                            <p id="overlay-text">
+                                Twoja przygoda zaczyna się tutaj.
+                            </p>
+                            <button id="start-btn" class="primary-btn">
+                                <span>ROZPOCZNIJ GRĘ</span>
+                                <span>→</span>
+                            </button>
+                            <p class="overlay-hint">PRESS SPACE TO PLAY</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="game-footer">
+                    <span><kbd>↑</kbd><kbd>←</kbd><kbd>↓</kbd><kbd>→</kbd>
+                        RUCH</span>
+                    <span><kbd>SPACE</kbd> PAUZA</span>
+                    <span><kbd>R</kbd> RESTART</span>
+                </div>
+            </div>
+        </section>
+
+        <section class="bottom-section">
+            <div class="tip">
+                <span class="tip-icon">✧</span>
+                <div>
+                    <strong>PRO TIP</strong>
+                    <p>Planuj zakręty z wyprzedzeniem. Im dłuższy wąż, tym trudniej!</p>
+                </div>
+            </div>
+            <div class="copyright">DESIGNED FOR THE NEXT LEVEL <span>© 2026</span></div>
+        </section>
+    </main>
+</body>
+</html>
