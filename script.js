@@ -628,7 +628,7 @@ document.addEventListener("keydown", handleInput);
 // --------------------------------------------------
 const touchArea = document.querySelector(".canvas-wrap");
 // Zapobiegamy przewijaniu strony przy dotykaniu planszy.
-canvas.addEventListener("touchstart", event => {
+touchArea.addEventListener("touchstart", event => {
     event.preventDefault();
 
     const touch = event.changedTouches[0];
@@ -639,12 +639,12 @@ canvas.addEventListener("touchstart", event => {
 }, { passive: false });
 
 // Zablokuj gest przewijania podczas przesuwania palcem.
-canvas.addEventListener("touchmove", event => {
+touchArea.addEventListener("touchmove", event => {
     event.preventDefault();
 }, { passive: false });
 
 // Zmiana kierunku na podstawie przesunięcia palca.
-canvas.addEventListener("touchend", event => {
+touchArea.addEventListener("touchend", event => {
     event.preventDefault();
 
     if (!touchActive) return;
@@ -664,7 +664,7 @@ canvas.addEventListener("touchend", event => {
     }
 }, { passive: false });
 
-canvas.addEventListener("touchcancel", () => {
+touchArea.addEventListener("touchcancel", () => {
     touchActive = false;
 }, { passive: true });
 
