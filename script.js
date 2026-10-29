@@ -626,7 +626,7 @@ document.addEventListener("keydown", handleInput);
 // --------------------------------------------------
 // STEROWANIE DOTYKOWE — POPRAWIONE
 // --------------------------------------------------
-
+const touchArea = document.querySelector(".canvas-wrap");
 // Zapobiegamy przewijaniu strony przy dotykaniu planszy.
 canvas.addEventListener("touchstart", event => {
     event.preventDefault();
