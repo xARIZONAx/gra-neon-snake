@@ -31,19 +31,25 @@ const SPEEDS = {
     hard: 80
 };
 
-let snake;
-let food;
-let direction;
-let nextDirection;
+let snake = [];
+let food = { x: 15, y: 12 };
+let direction = { x: 1, y: 0 };
+let nextDirection = { x: 1, y: 0 };
+
 let score = 0;
 let best = loadBest();
 let level = 1;
 let state = "ready";
+
 let lastTime = 0;
 let accumulator = 0;
 let particles = [];
-let foodPulse = 0;
 let animationId = null;
+
+// Sterowanie dotykowe
+let touchStartX = 0;
+let touchStartY = 0;
+let touchActive = false;
 
 bestElement.textContent = formatScore(best);
 
@@ -59,7 +65,7 @@ function saveBest() {
     try {
         localStorage.setItem("neonSnakeBest", String(best));
     } catch {
-        // Gra nadal działa, nawet bez dostępu do localStorage.
+        // Gra działa również wtedy, gdy zapis jest niedostępny.
     }
 }
 
@@ -82,7 +88,7 @@ function resetGame() {
     level = 1;
     particles = [];
     accumulator = 0;
-    foodPulse = 0;
+    lastTime = 0;
 
     scoreElement.textContent = formatScore(score);
     levelElement.textContent = String(level).padStart(2, "0");
@@ -92,22 +98,33 @@ function resetGame() {
 }
 
 function spawnFood() {
-    let position;
-    let attempts = 0;
+    const freeCells = [];
 
-    do {
-        position = {
-            x: Math.floor(Math.random() * SIZE),
-            y: Math.floor(Math.random() * SIZE)
-        };
-        attempts++;
-    } while (
-        snake.some(segment =>
-            segment.x === position.x && segment.y === position.y
-        ) && attempts < 1000
-    );
+    for (let y = 0; y < SIZE; y++) {
+        for (let x = 0; x < SIZE; x++) {
+            const occupied = snake.some(
+                segment => segment.x === x && segment.y === y
+            );
 
-    food = position;
+            if (!occupied) {
+                freeCells.push({ x, y });
+            }
+        }
+    }
+
+    if (freeCells.length === 0) {
+        state = "over";
+        showOverlay(
+            "🏆",
+            "Wygrana!",
+            "Wypełniłeś całą planszę!",
+            "ZAGRAJ PONOWNIE"
+        );
+        statusElement.textContent = "WYGRANA";
+        return;
+    }
+
+    food = freeCells[Math.floor(Math.random() * freeCells.length)];
 }
 
 function startGame() {
@@ -133,7 +150,13 @@ function pauseGame() {
 
     state = "paused";
     statusElement.textContent = "PAUZA";
-    showOverlay("Ⅱ", "Chwila przerwy", "Twój wąż czeka na dalsze instrukcje.", "WRÓĆ DO GRY");
+
+    showOverlay(
+        "Ⅱ",
+        "Chwila przerwy",
+        "Twój wąż czeka na dalsze instrukcje.",
+        "WRÓĆ DO GRY"
+    );
 }
 
 function resumeGame() {
@@ -162,13 +185,22 @@ function endGame() {
         saveBest();
     }
 
-    showOverlay("✦", "Game Over", `Twój wynik: ${score} punktów. Spróbujesz ponownie?`, "ZAGRAJ PONOWNIE");
-    createBurst(
-        snake[0].x * CELL + CELL / 2,
-        snake[0].y * CELL + CELL / 2,
-        COLORS.food,
-        24
+    showOverlay(
+        "✦",
+        "Game Over",
+        `Twój wynik: ${score} punktów. Spróbujesz ponownie?`,
+        "ZAGRAJ PONOWNIE"
     );
+
+    if (snake.length > 0) {
+        createBurst(
+            snake[0].x * CELL + CELL / 2,
+            snake[0].y * CELL + CELL / 2,
+            COLORS.food,
+            24
+        );
+    }
+
     draw();
 }
 
@@ -176,6 +208,7 @@ function showOverlay(icon, title, message, buttonText) {
     overlayIcon.textContent = icon;
     overlayTitle.textContent = title;
     overlayText.textContent = message;
+
     startButton.querySelector("span:first-child").textContent = buttonText;
     overlay.classList.remove("hidden");
 }
@@ -187,7 +220,7 @@ function changeDirection(x, y) {
 
     if (state !== "running") return;
 
-    // Zapobiega zawracaniu bezpośrednio na własny ogon.
+    // Nie pozwalaj na natychmiastowe zawrócenie.
     if (x === -direction.x && y === -direction.y) return;
 
     nextDirection = { x, y };
@@ -195,8 +228,17 @@ function changeDirection(x, y) {
 
 function handleInput(event) {
     const keys = [
-        "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight",
-        " ", "Space", "KeyW", "KeyA", "KeyS", "KeyD"
+        "ArrowUp",
+        "ArrowDown",
+        "ArrowLeft",
+        "ArrowRight",
+        "Space",
+        "KeyW",
+        "KeyA",
+        "KeyS",
+        "KeyD",
+        "KeyR",
+        "Escape"
     ];
 
     if (keys.includes(event.code)) {
@@ -260,8 +302,10 @@ function update() {
 
     // Kolizja ze ścianą.
     if (
-        head.x < 0 || head.x >= SIZE ||
-        head.y < 0 || head.y >= SIZE
+        head.x < 0 ||
+        head.x >= SIZE ||
+        head.y < 0 ||
+        head.y >= SIZE
     ) {
         endGame();
         return;
@@ -269,12 +313,15 @@ function update() {
 
     const eating = head.x === food.x && head.y === food.y;
 
-    // Jeśli wąż nie je, jego ogon przesunie się w tym samym ruchu.
+    // Jeśli nie jesz, ogon zwolni swoje pole w tym ruchu.
     const bodyToCheck = eating ? snake : snake.slice(0, -1);
 
-    if (bodyToCheck.some(segment =>
-        segment.x === head.x && segment.y === head.y
-    )) {
+    // Kolizja z własnym ciałem.
+    if (
+        bodyToCheck.some(
+            segment => segment.x === head.x && segment.y === head.y
+        )
+    ) {
         endGame();
         return;
     }
@@ -326,15 +373,15 @@ function createBurst(x, y, color, amount) {
 }
 
 function updateParticles(dt) {
-    for (const p of particles) {
-        p.x += p.vx * dt;
-        p.y += p.vy * dt;
-        p.life -= dt;
-        p.vx *= 0.98;
-        p.vy *= 0.98;
+    for (const particle of particles) {
+        particle.x += particle.vx * dt;
+        particle.y += particle.vy * dt;
+        particle.life -= dt;
+        particle.vx *= 0.98;
+        particle.vy *= 0.98;
     }
 
-    particles = particles.filter(p => p.life > 0);
+    particles = particles.filter(particle => particle.life > 0);
 }
 
 function drawBackground() {
@@ -358,10 +405,13 @@ function drawBackground() {
         ctx.stroke();
     }
 
-    // Delikatne podświetlenie środka planszy.
     const glow = ctx.createRadialGradient(
-        canvas.width / 2, canvas.height / 2, 10,
-        canvas.width / 2, canvas.height / 2, canvas.width * 0.7
+        canvas.width / 2,
+        canvas.height / 2,
+        10,
+        canvas.width / 2,
+        canvas.height / 2,
+        canvas.width * 0.7
     );
 
     glow.addColorStop(0, "rgba(32, 111, 111, 0.08)");
@@ -388,7 +438,8 @@ function drawFood(time) {
     ctx.fill();
 
     const gradient = ctx.createRadialGradient(
-        x - 2, y - 2, 1, x, y, radius
+        x - 2, y - 2, 1,
+        x, y, radius
     );
 
     gradient.addColorStop(0, "#ffffff");
@@ -418,18 +469,28 @@ function drawSnake() {
             ctx.shadowBlur = 17;
         }
 
-        const gradient = ctx.createLinearGradient(x, y, x + size, y + size);
-        gradient.addColorStop(0, index === 0 ? "#b4fff3" : COLORS.snake);
-        gradient.addColorStop(1, index === 0 ? COLORS.snake : COLORS.snakeDark);
+        const gradient = ctx.createLinearGradient(
+            x, y, x + size, y + size
+        );
+
+        gradient.addColorStop(
+            0,
+            index === 0 ? "#b4fff3" : COLORS.snake
+        );
+
+        gradient.addColorStop(
+            1,
+            index === 0 ? COLORS.snake : COLORS.snakeDark
+        );
 
         ctx.fillStyle = gradient;
         roundedRect(ctx, x, y, size, size, radius);
         ctx.fill();
 
-        // Drobny refleks światła na segmentach.
         ctx.shadowBlur = 0;
         ctx.globalAlpha = index === 0 ? 0.65 : 0.22;
         ctx.fillStyle = "#ffffff";
+
         roundedRect(ctx, x + 2, y + 2, size - 4, 2, 1);
         ctx.fill();
 
@@ -451,13 +512,25 @@ function drawEyes() {
     let eyes;
 
     if (direction.x === 1) {
-        eyes = [[cx + forward, cy - offset], [cx + forward, cy + offset]];
+        eyes = [
+            [cx + forward, cy - offset],
+            [cx + forward, cy + offset]
+        ];
     } else if (direction.x === -1) {
-        eyes = [[cx - forward, cy - offset], [cx - forward, cy + offset]];
+        eyes = [
+            [cx - forward, cy - offset],
+            [cx - forward, cy + offset]
+        ];
     } else if (direction.y === -1) {
-        eyes = [[cx - offset, cy - forward], [cx + offset, cy - forward]];
+        eyes = [
+            [cx - offset, cy - forward],
+            [cx + offset, cy - forward]
+        ];
     } else {
-        eyes = [[cx - offset, cy + forward], [cx + offset, cy + forward]];
+        eyes = [
+            [cx - offset, cy + forward],
+            [cx + offset, cy + forward]
+        ];
     }
 
     ctx.fillStyle = "#06201c";
@@ -477,14 +550,24 @@ function roundedRect(ctx, x, y, width, height, radius) {
 function drawParticles() {
     ctx.save();
 
-    for (const p of particles) {
-        ctx.globalAlpha = Math.max(0, p.life / p.maxLife);
-        ctx.fillStyle = p.color;
-        ctx.shadowColor = p.color;
+    for (const particle of particles) {
+        ctx.globalAlpha = Math.max(
+            0,
+            particle.life / particle.maxLife
+        );
+
+        ctx.fillStyle = particle.color;
+        ctx.shadowColor = particle.color;
         ctx.shadowBlur = 10;
 
         ctx.beginPath();
-        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+        ctx.arc(
+            particle.x,
+            particle.y,
+            particle.size,
+            0,
+            Math.PI * 2
+        );
         ctx.fill();
     }
 
@@ -507,7 +590,6 @@ function gameLoop(time) {
     lastTime = time;
     accumulator += dt;
 
-    foodPulse += dt;
     updateParticles(dt);
 
     const step = getSpeed() / 1000;
@@ -524,6 +606,7 @@ function gameLoop(time) {
     }
 }
 
+// Przycisk startu, pauzy i wznowienia.
 startButton.addEventListener("click", () => {
     if (state === "paused") {
         resumeGame();
@@ -532,29 +615,46 @@ startButton.addEventListener("click", () => {
     }
 });
 
+// Zmiana poziomu trudności.
 difficultySelect.addEventListener("change", () => {
-    if (state === "running") {
-        accumulator = 0;
-    }
+    accumulator = 0;
 });
 
+// Klawiatura.
 document.addEventListener("keydown", handleInput);
 
-// Obsługa dotykowa: przesuń palcem po planszy, aby skręcić.
-let touchStartX = 0;
-let touchStartY = 0;
+// --------------------------------------------------
+// STEROWANIE DOTYKOWE — POPRAWIONE
+// --------------------------------------------------
 
+// Zapobiegamy przewijaniu strony przy dotykaniu planszy.
 canvas.addEventListener("touchstart", event => {
+    event.preventDefault();
+
     const touch = event.changedTouches[0];
+
     touchStartX = touch.clientX;
     touchStartY = touch.clientY;
-}, { passive: true });
+    touchActive = true;
+}, { passive: false });
 
+// Zablokuj gest przewijania podczas przesuwania palcem.
+canvas.addEventListener("touchmove", event => {
+    event.preventDefault();
+}, { passive: false });
+
+// Zmiana kierunku na podstawie przesunięcia palca.
 canvas.addEventListener("touchend", event => {
+    event.preventDefault();
+
+    if (!touchActive) return;
+    touchActive = false;
+
     const touch = event.changedTouches[0];
     const dx = touch.clientX - touchStartX;
     const dy = touch.clientY - touchStartY;
 
+    // Ignoruj bardzo krótkie dotknięcia.
     if (Math.max(Math.abs(dx), Math.abs(dy)) < 18) return;
 
     if (Math.abs(dx) > Math.abs(dy)) {
@@ -562,10 +662,17 @@ canvas.addEventListener("touchend", event => {
     } else {
         changeDirection(0, dy > 0 ? 1 : -1);
     }
+}, { passive: false });
+
+canvas.addEventListener("touchcancel", () => {
+    touchActive = false;
 }, { passive: true });
 
-// Pierwsze renderowanie planszy.
+// Obsługa myszy i rysika nie wymaga dodatkowych gestów.
+
+// Pierwsze renderowanie gry.
 resetGame();
+
 showOverlay(
     "▶",
     "Gotowy?",
